@@ -9,13 +9,31 @@ jobs:
     runs-on: ubuntu-latest
     name: Codeball
     steps:
-      - name: Codeball
-        uses: sturdy-dev/codeball-action@v2
+
+      # Start a new Codeball review job
+      # This step is asynchronous and will return a job id
+      - name: Trigger Codeball
+        id: codeball_baller
+        uses: sturdy-dev/codeball-action/baller@beta
         with:
-          # For all configuration options see https://github.com/sturdy-dev/codeball-action/blob/v2/action.yml
-          approvePullRequests: "true"
-          labelPullRequestsWhenApproved: "true"
-          labelPullRequestsWhenReviewNeeded: "false"
-          failJobsWhenReviewNeeded: "false"
-          approveThreshold: "0.001"
-          carefulReviewThreshold: "0.000"
+          approveThreshold: "0.935"
+          carefulReviewThreshold: "0.100"
+
+      # Wait for Codeball to return the status
+      - name: Get Status
+        id: codeball_status
+        uses: sturdy-dev/codeball-action/status@beta
+        with:
+          codeball-job-id: ${{ steps.codeball_baller.outputs.codeball-job-id }}
+
+
+      # If Codeball approved the contribution, approve the PR
+      - name: Approve PR
+        uses: sturdy-dev/codeball-action/approver@beta
+        if: ${{ steps.codeball_status.outputs.jobType == 'contribution'}}
+        with:
+          codeball-job-id: ${{ steps.codeball_baller.outputs.codeball-job-id }}
+          approve: "true" # hack
+          GITHUB_TOKEN: ${{ secrets.CODEBALL_BOT_TOKEN }}
+
+
